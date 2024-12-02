@@ -51,37 +51,37 @@ with ui.layout_columns(fill=False):
 # Data Table and Visualizations
 with ui.layout_columns(fill=False):
     with ui.card():
-        "Filtered Tipping Data"
+        "Data Table"
         @render.data_frame
         def tipping_df():
             return filtered_data()
 
     with ui.card(full_screen=True):
-        ui.card_header("Scatterplot: Total Bill vs Tip")
+        ui.card_header("Scatterplot: Do males or females tip more?")
         @render_plotly
         def scatterplot_with_regression():
             filtered = filtered_data()
             fig = px.scatter(
                 filtered,
-                x="total_bill",
-                y="tip",
-                color="sex",
+                x="tip",
+                y="total_bill",
+                color="smoker",
                 labels={"total_bill": "Total Bill ($)", "tip": "Tip ($)"},
                 title="Scatterplot: Total Bill vs Tip"
             )
             return fig
 
     with ui.card(full_screen=True):
-        ui.card_header("Bar chart: Group by Day vs Tip")
+        ui.card_header("Bar chart: How does size affect overall tips?")
         @render_plotly
         def barchart():
             filtered = filtered_data()
-            day_tips = filtered.groupby("day")["tip"].sum().reset_index()
+            day_tips = filtered.groupby("size")["tip"].sum().reset_index()
             fig = px.bar(
                 day_tips,
-                x="day",
+                x="size",
                 y="tip",
-                labels={"day": "Day", "tip": "Total Tips ($)"},
+                labels={"size": "Size", "tip": "Total Tips ($)"},
                 title="Total Tips by Day of the Week"
             )
             return fig
@@ -126,5 +126,7 @@ def reactive_tips_combined():
 
     return deque_snapshot, df, new_entry
     
+
+
 
 
