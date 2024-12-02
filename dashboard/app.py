@@ -12,8 +12,8 @@ from collections import deque
 from scipy import stats
 
 # Constants
-UPDATE_INTERVAL_SECS = 10
-DEQUE_SIZE = 10
+UPDATE_INTERVAL_SECS = 3
+DEQUE_SIZE = 2
 reactive_value_wrapper = reactive.value(deque(maxlen=DEQUE_SIZE))
 
 # Load dataset
@@ -34,9 +34,10 @@ ui.page_opts(title="Tipping Culture in the USA", fillable=True)
 
 with ui.sidebar(open="open"):
     ui.h1("Tip Filters")
-    ui.input_checkbox_group("Gender_selection", "Customer's Gender:", choices=["Male", "Female"], inline=True)
-    ui.input_checkbox_group("Smoker_selection", "Is Customer a Smoker?", choices=["Yes", "No"], inline=True)
-    ui.input_checkbox_group("Dining_Time_Selection", "Food Service:", choices=["Lunch", "Dinner"], inline=True)
+    # Default selected checkboxes for Gender, Smoker, and Dining Time
+    ui.input_checkbox_group("Gender_selection", "Customer's Gender:", choices=["Male", "Female"], inline=True, selected=["Male", "Female"])
+    ui.input_checkbox_group("Smoker_selection", "Is Customer a Smoker?", choices=["Yes", "No"], inline=True, selected=["Yes", "No"])
+    ui.input_checkbox_group("Dining_Time_Selection", "Food Service:", choices=["Lunch", "Dinner"], inline=True, selected=["Lunch", "Dinner"])
     ui.input_slider("total_bill", "Total Bill Amount", min=bill_rng[0], max=bill_rng[1], value=bill_rng, pre="$", step=0.01)
 
 # Live Data Display
@@ -134,6 +135,7 @@ def reactive_tips_combined():
     df = pd.DataFrame(deque_snapshot)
 
     return deque_snapshot, df, new_entry
+
     
 
 
