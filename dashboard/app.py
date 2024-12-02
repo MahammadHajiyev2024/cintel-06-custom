@@ -7,85 +7,60 @@ from shiny import reactive, render
 from datetime import datetime
 import pandas as pd
 from shiny import reactive, render, req
-from shiny.express import input, ui,render
+from shiny.express import input, ui, render
 from collections import deque
 from scipy import stats
 
-UPDATE_INTERVAL_SECS: int = 10
-DEQUE_SIZE: int=10
+# Constants
+UPDATE_INTERVAL_SECS = 10
+DEQUE_SIZE = 10
 reactive_value_wrapper = reactive.value(deque(maxlen=DEQUE_SIZE))
 
-#import icons from faicons----------------------------------------------------------------------
-ICONS={
-    "user": fa.icon_svg("user", "regular"),
-    "person": fa.icon_svg("person"),
-    "wallet": fa.icon_svg("wallet"),
-    "credit-card": fa.icon_svg("credit-card"),
-    "currency-dollar": fa.icon_svg("dollar-sign"),
-    "ellipsis": fa.icon_svg("ellipsis"),
-}
+# Load dataset
+tips = px.data.tips()
+bill_rng = (tips["total_bill"].min(), tips["total_bill"].max())
 
-tips = px.data.tips() #call in tipping data
-bill_rng = (min(tips.total_bill), max(tips.total_bill))
-
-#page title-----------------------------------------------------------------------------------------
+# UI
 ui.page_opts(title="Tipping Culture in the USA", fillable=True)
 
 with ui.sidebar(open="open"):
     ui.h1("Tip Filters")
-    # Selecting Gender Filter
-    ui.input_checkbox_group("Gender_selection","Customer's Gender: ", choices=["Male","Female"], inline=True)
-    # Selecting Smoking Filter
-    ui.input_checkbox_group("Smoker_selection","Is Customer a Smoker?", choices=["Yes","No"], inline=True)
+    ui.input_checkbox_group("Gender_selection", "Customer's Gender:", choices=["Male", "Female"], inline=True)
+    ui.input_checkbox_group("Smoker_selection", "Is Customer a Smoker?", choices=["Yes", "No"], inline=True)
+    ui.input_checkbox_group("Dining_Time_Selection", "Food Service:", choices=["Lunch", "Dinner"], inline=True)
+    ui.input_slider("total_bill", "Total Bill Amount", min=bill_rng[0], max=bill_rng[1], value=bill_rng, pre="$", step=0.01)
 
-    # Selecting Dining Time Filter
-    ui.input_checkbox_group("Dining_Time_Selection","Food Service: ", choices=["Lunch","Dinner"], inline=True)
-    ui.input_slider("total_bill","Total Bill Amount",min= bill_rng[0],max= bill_rng[1], value=bill_rng,pre="$",step=0.01)
-
-#------------------------------------------------------------------------------------------------
-
-
-# Live data
+# Live Data Display
 with ui.layout_columns(fill=False):
-    # Average tip per table
-    with ui.value_box(
-        showcase=ICONS["credit-card"],  # Replace with your actual icon value
-        theme="bg-gradient-orange-red", height=200
-    ):
+    with ui.value_box(theme="bg-gradient-orange-red", height=200):
         "Average Tip per Table"
         @render.text
         def display_avg_tip():
-            _, df, _ = reactive_tips_combined()  # Get reactive tip data
-            avg_tip = df["avg_tip"].mean()  # Calculate the average tip for girls
+            filtered = filtered_data()
+            avg_tip = filtered["tip"].mean() if not filtered.empty else 0
             return f"${avg_tip:.2f}"
 
-    # Average bill per table
-    with ui.value_box(
-        showcase=ICONS["currency-dollar"],  # Replace with your actual icon value
-        theme="bg-gradient-green-blue", height=200
-    ):
+    with ui.value_box(theme="bg-gradient-green-blue", height=200):
         "Average Bill per Table"
         @render.text
         def display_avg_bill():
-            _, df, _ = reactive_tips_combined()  # Get reactive tip data
-            avg_bill = df["avg_bill"].mean()  # Calculate the average bill for boys
+            filtered = filtered_data()
+            avg_bill = filtered["total_bill"].mean() if not filtered.empty else 0
             return f"${avg_bill:.2f}"
 
-# Data Table and Visualizations ------------------------------------------------------------------
+# Data Table and Visualizations
 with ui.layout_columns(fill=False):
-    # Data Table
     with ui.card():
         "Filtered Tipping Data"
         @render.data_frame
         def tipping_df():
-            return render.DataTable(filtered_data(), selection_mode='row')
+            return filtered_data()
 
-    # Scatterplot with regression line
     with ui.card(full_screen=True):
         ui.card_header("Scatterplot: Total Bill vs Tip")
         @render_plotly
         def scatterplot_with_regression():
-            filtered = filtered_data()  # Get filtered data based on user selections
+            filtered = filtered_data()
             fig = px.scatter(
                 filtered,
                 x="total_bill",
@@ -96,12 +71,11 @@ with ui.layout_columns(fill=False):
             )
             return fig
 
-    # Bar chart for Total Tips by Day
     with ui.card(full_screen=True):
         ui.card_header("Bar chart: Group by Day vs Tip")
         @render_plotly
         def barchart():
-            filtered = filtered_data()  # Get filtered data based on user selections
+            filtered = filtered_data()
             day_tips = filtered.groupby("day")["tip"].sum().reset_index()
             fig = px.bar(
                 day_tips,
@@ -112,19 +86,31 @@ with ui.layout_columns(fill=False):
             )
             return fig
 
-#------------------------------------------------------------------------------------------------
-
-
+# Reactive Functions
 @reactive.calc
 def filtered_data():
-    req(input.Gender_selection(), input.Smoker_selection(), input.Dining_Time_Selection(), input.total_bill())
-    df = tips[
-        (tips["sex"].isin(input.Gender_selection())) &
-        (tips["smoker"].isin(input.Smoker_selection())) &
-        (tips["time"].isin(input.Dining_Time_Selection())) &
-        (tips["total_bill"].between(input.total_bill()[0], input.total_bill()[1]))
+    # Ensure the values are being properly accessed and are not empty
+    gender_selection = input.Gender_selection()  # These need to be reactive inputs
+    smoker_selection = input.Smoker_selection()
+    dining_time_selection = input.Dining_Time_Selection()
+    total_bill = input.total_bill()
+
+    req(gender_selection, smoker_selection, dining_time_selection, total_bill)
+
+    print(f"Gender_selection: {input.Gender_selection}")
+    print(f"Smoker_selection: {input.Smoker_selection}")
+    print(f"Dining_Time_Selection: {input.Dining_Time_Selection}")
+    print(f"total_bill: {input.total_bill}")
+    
+
+    # Filter the dataset based on the input values
+    filtered = tips[
+        (tips["sex"].isin(gender_selection)) &
+        (tips["smoker"].isin(smoker_selection)) &
+        (tips["time"].isin(dining_time_selection)) &
+        (tips["total_bill"].between(total_bill[0], total_bill[1]))
     ]
-    return df
+    return filtered
 
 @reactive.calc
 def reactive_tips_combined():
@@ -139,5 +125,6 @@ def reactive_tips_combined():
     df = pd.DataFrame(deque_snapshot)
 
     return deque_snapshot, df, new_entry
+    
 
 
