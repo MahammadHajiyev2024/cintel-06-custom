@@ -20,6 +20,15 @@ reactive_value_wrapper = reactive.value(deque(maxlen=DEQUE_SIZE))
 tips = px.data.tips()
 bill_rng = (tips["total_bill"].min(), tips["total_bill"].max())
 
+ICONS={
+    "user": fa.icon_svg("user", "regular"),
+    "person": fa.icon_svg("person"),
+    "wallet": fa.icon_svg("wallet"),
+    "credit-card": fa.icon_svg("credit-card"),
+    "currency-dollar": fa.icon_svg("dollar-sign"),
+    "ellipsis": fa.icon_svg("ellipsis"),
+}
+
 # UI
 ui.page_opts(title="Tipping Culture in the USA", fillable=True)
 
@@ -32,7 +41,7 @@ with ui.sidebar(open="open"):
 
 # Live Data Display
 with ui.layout_columns(fill=False):
-    with ui.value_box(theme="bg-gradient-orange-red", height=200):
+    with ui.value_box(showcase=ICONS["wallet"],theme="bg-gradient-orange-red", height=200):
         "Average Tip per Table"
         @render.text
         def display_avg_tip():
@@ -40,7 +49,7 @@ with ui.layout_columns(fill=False):
             avg_tip = filtered["tip"].mean() if not filtered.empty else 0
             return f"${avg_tip:.2f}"
 
-    with ui.value_box(theme="bg-gradient-green-blue", height=200):
+    with ui.value_box(showcase=ICONS["credit-card"],theme="bg-gradient-green-blue", height=200):
         "Average Bill per Table"
         @render.text
         def display_avg_bill():
@@ -57,7 +66,7 @@ with ui.layout_columns(fill=False):
             return filtered_data()
 
     with ui.card(full_screen=True):
-        ui.card_header("Scatterplot: Do males or females tip more?")
+        ui.card_header("Do males or females tip more?")
         @render_plotly
         def scatterplot_with_regression():
             filtered = filtered_data()
@@ -72,7 +81,7 @@ with ui.layout_columns(fill=False):
             return fig
 
     with ui.card(full_screen=True):
-        ui.card_header("Bar chart: How does size affect overall tips?")
+        ui.card_header("How does size affect overall tips?")
         @render_plotly
         def barchart():
             filtered = filtered_data()
